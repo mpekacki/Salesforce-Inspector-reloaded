@@ -1047,6 +1047,7 @@ class AllDataBoxShortcut extends React.PureComponent {
         const flowSelect = "SELECT DurableId, LatestVersionId, ApiName, Label, ProcessType FROM FlowDefinitionView WHERE Label LIKE '%" + shortcutSearch + "%' LIMIT 30";
         const profileSelect = "SELECT Id, Name, UserLicense.Name FROM Profile WHERE Name LIKE '%" + shortcutSearch + "%' LIMIT 30";
         const permSetSelect = "SELECT Id, Name, Label, Type, LicenseId, License.Name, PermissionSetGroupId FROM PermissionSet WHERE Label LIKE '%" + shortcutSearch + "%' LIMIT 30";
+        const apexClassSelect = "SELECT Id, ApiVersion, LengthWithoutComments, Name, NamespacePrefix FROM ApexClass WHERE Name LIKE '%" + shortcutSearch + "%' LIMIT 30";
         const compositeQuery = {
           "compositeRequest": [
             {
@@ -1061,6 +1062,10 @@ class AllDataBoxShortcut extends React.PureComponent {
               "method": "GET",
               "url": "/services/data/v" + apiVersion + "/query/?q=" + encodeURIComponent(permSetSelect),
               "referenceId": "permSetSelect"
+            }, {
+              "method": "GET",
+              "url": "/services/data/v" + apiVersion + "/query/?q=" + encodeURIComponent(apexClassSelect),
+              "referenceId": "apexClassSelect"
             }
           ]
         };
@@ -1105,6 +1110,11 @@ class AllDataBoxShortcut extends React.PureComponent {
               let url = rec.UrlPathPrefix ? " • /" + rec.UrlPathPrefix : "";
               rec.name = rec.Id + url;
               rec.detail = rec.attributes.type + " (" + rec.Status + ") • Builder";
+            } else if (rec.attributes.type === "ApexClass"){
+              rec.link = "/lightning/setup/ApexClasses/page?address=%2F" + rec.Id;
+              rec.label = rec.Name;
+              rec.name = (rec.NamespacePrefix ? rec.NamespacePrefix + "__" : "") + rec.Name;
+              rec.detail = rec.attributes.type + " • " + rec.ApiVersion + ".0" + " • " + rec.LengthWithoutComments + " chars";
             }
             result.push(rec);
           });
