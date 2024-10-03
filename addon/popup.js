@@ -1041,6 +1041,7 @@ class AllDataBoxShortcut extends React.PureComponent {
         //enable metadata search by default
         localStorage.setItem("metadataShortcutSearch", true);
       }
+      let metadataApexClassesShortcutSearch = localStorage.getItem("metadataApexClassesShortcutSearch");
 
       //search for metadata if user did not disabled it
       if (metadataShortcutSearch == "true"){
@@ -1062,13 +1063,17 @@ class AllDataBoxShortcut extends React.PureComponent {
               "method": "GET",
               "url": "/services/data/v" + apiVersion + "/query/?q=" + encodeURIComponent(permSetSelect),
               "referenceId": "permSetSelect"
-            }, {
-              "method": "GET",
-              "url": "/services/data/v" + apiVersion + "/query/?q=" + encodeURIComponent(apexClassSelect),
-              "referenceId": "apexClassSelect"
             }
           ]
         };
+        
+        if (metadataApexClassesShortcutSearch == "true"){
+          compositeQuery.compositeRequest.push({
+            "method": "GET",
+            "url": "/services/data/v" + apiVersion + "/query/?q=" + encodeURIComponent(apexClassSelect),
+            "referenceId": "apexClassSelect"
+          });
+        }
 
         const searchResult = await sfConn.rest("/services/data/v" + apiVersion + "/composite", {method: "POST", body: compositeQuery});
         let results = searchResult.compositeResponse.filter((elm) => elm.httpStatusCode == 200 && elm.body.records.length > 0);
