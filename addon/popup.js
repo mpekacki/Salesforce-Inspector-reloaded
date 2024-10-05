@@ -1041,7 +1041,28 @@ class AllDataBoxShortcut extends React.PureComponent {
         //enable metadata search by default
         localStorage.setItem("metadataShortcutSearch", true);
       }
-      let metadataApexClassesShortcutSearch = localStorage.getItem("metadataApexClassesShortcutSearch");
+
+      let metadataSearchIncludeFlows = localStorage.getItem("metadataSearchIncludeFlows");
+      if (metadataSearchIncludeFlows == null) {
+        //enable Flows search by default
+        localStorage.setItem("metadataSearchIncludeFlows", true);
+      }
+
+      let metadataSearchIncludeProfiles = localStorage.getItem("metadataSearchIncludeProfiles");
+      if (metadataSearchIncludeProfiles == null) {
+        //enable Profiles search by default
+        localStorage.setItem("metadataSearchIncludeProfiles", true);
+      }
+      
+      
+      let metadataSearchIncludePermSets = localStorage.getItem("metadataSearchIncludePermSets");
+      if (metadataSearchIncludePermSets == null) {
+        //enable Permission Sets search by default
+        localStorage.setItem("metadataSearchIncludePermSets", true);
+      }
+
+      let metadataSearchIncludeApexClasses = localStorage.getItem("metadataSearchIncludeApexClasses");
+      //Apex Class search is off by default
 
       //search for metadata if user did not disabled it
       if (metadataShortcutSearch == "true"){
@@ -1050,24 +1071,34 @@ class AllDataBoxShortcut extends React.PureComponent {
         const permSetSelect = "SELECT Id, Name, Label, Type, LicenseId, License.Name, PermissionSetGroupId FROM PermissionSet WHERE Label LIKE '%" + shortcutSearch + "%' LIMIT 30";
         const apexClassSelect = "SELECT Id, ApiVersion, LengthWithoutComments, Name, NamespacePrefix FROM ApexClass WHERE Name LIKE '%" + shortcutSearch + "%' LIMIT 30";
         const compositeQuery = {
-          "compositeRequest": [
-            {
-              "method": "GET",
-              "url": "/services/data/v" + apiVersion + "/query/?q=" + encodeURIComponent(flowSelect),
-              "referenceId": "flowSelect"
-            }, {
-              "method": "GET",
-              "url": "/services/data/v" + apiVersion + "/query/?q=" + encodeURIComponent(profileSelect),
-              "referenceId": "profileSelect"
-            }, {
-              "method": "GET",
-              "url": "/services/data/v" + apiVersion + "/query/?q=" + encodeURIComponent(permSetSelect),
-              "referenceId": "permSetSelect"
-            }
-          ]
+          "compositeRequest": []
         };
-        
-        if (metadataApexClassesShortcutSearch == "true"){
+
+        if (metadataSearchIncludeFlows == "true"){
+          compositeQuery.compositeRequest.push({
+            "method": "GET",
+            "url": "/services/data/v" + apiVersion + "/query/?q=" + encodeURIComponent(flowSelect),
+            "referenceId": "flowSelect"
+          });
+        }
+
+        if (metadataSearchIncludeProfiles == "true"){
+          compositeQuery.compositeRequest.push({
+            "method": "GET",
+            "url": "/services/data/v" + apiVersion + "/query/?q=" + encodeURIComponent(profileSelect),
+            "referenceId": "profileSelect"
+          });
+        }
+
+        if (metadataSearchIncludePermSets == "true"){
+          compositeQuery.compositeRequest.push({
+            "method": "GET",
+            "url": "/services/data/v" + apiVersion + "/query/?q=" + encodeURIComponent(permSetSelect),
+            "referenceId": "permSetSelect"
+          });
+        }
+
+        if (metadataSearchIncludeApexClasses == "true"){
           compositeQuery.compositeRequest.push({
             "method": "GET",
             "url": "/services/data/v" + apiVersion + "/query/?q=" + encodeURIComponent(apexClassSelect),
@@ -1075,55 +1106,58 @@ class AllDataBoxShortcut extends React.PureComponent {
           });
         }
 
-        const searchResult = await sfConn.rest("/services/data/v" + apiVersion + "/composite", {method: "POST", body: compositeQuery});
-        let results = searchResult.compositeResponse.filter((elm) => elm.httpStatusCode == 200 && elm.body.records.length > 0);
+        //search for metadata if there is at least one category enabled
+        if (compositeQuery.compositeRequest.length > 0){
+          const searchResult = await sfConn.rest("/services/data/v" + apiVersion + "/composite", {method: "POST", body: compositeQuery});
+          let results = searchResult.compositeResponse.filter((elm) => elm.httpStatusCode == 200 && elm.body.records.length > 0);
 
-        let enablePermSetSummary = localStorage.getItem("enablePermSetSummary") === "true";
+          let enablePermSetSummary = localStorage.getItem("enablePermSetSummary") === "true";
 
-        results.forEach(element => {
-          element.body.records.forEach(rec => {
-            if (rec.attributes.type === "FlowDefinitionView"){
-              rec.link = "/builder_platform_interaction/flowBuilder.app?flowDefId=" + rec.DurableId + "&flowId=" + rec.LatestVersionId;
-              rec.label = rec.Label;
-              rec.name = rec.ApiName;
-              rec.detail = rec.attributes.type + " • " + rec.ProcessType;
-            } else if (rec.attributes.type === "Profile"){
-              rec.link = "/lightning/setup/EnhancedProfiles/page?address=%2F" + rec.Id;
-              rec.label = rec.Name;
-              rec.name = rec.Id;
-              rec.detail = rec.attributes.type + " • " + rec.UserLicense.Name;
-            } else if (rec.attributes.type === "PermissionSet"){
-              rec.label = rec.Label;
-              rec.name = rec.Name;
-              rec.detail = rec.attributes.type + " • " + rec.Type;
-              rec.detail += rec.License?.Name != null ? " • " + rec.License?.Name : "";
+          results.forEach(element => {
+            element.body.records.forEach(rec => {
+              if (rec.attributes.type === "FlowDefinitionView"){
+                rec.link = "/builder_platform_interaction/flowBuilder.app?flowDefId=" + rec.DurableId + "&flowId=" + rec.LatestVersionId;
+                rec.label = rec.Label;
+                rec.name = rec.ApiName;
+                rec.detail = rec.attributes.type + " • " + rec.ProcessType;
+              } else if (rec.attributes.type === "Profile"){
+                rec.link = "/lightning/setup/EnhancedProfiles/page?address=%2F" + rec.Id;
+                rec.label = rec.Name;
+                rec.name = rec.Id;
+                rec.detail = rec.attributes.type + " • " + rec.UserLicense.Name;
+              } else if (rec.attributes.type === "PermissionSet"){
+                rec.label = rec.Label;
+                rec.name = rec.Name;
+                rec.detail = rec.attributes.type + " • " + rec.Type;
+                rec.detail += rec.License?.Name != null ? " • " + rec.License?.Name : "";
 
-              let psetOrGroupId;
-              let type;
-              if (rec.Type === "Group"){
-                psetOrGroupId = rec.PermissionSetGroupId;
-                type = "PermSetGroups";
-              } else {
-                psetOrGroupId = rec.Id;
-                type = "PermSets";
+                let psetOrGroupId;
+                let type;
+                if (rec.Type === "Group"){
+                  psetOrGroupId = rec.PermissionSetGroupId;
+                  type = "PermSetGroups";
+                } else {
+                  psetOrGroupId = rec.Id;
+                  type = "PermSets";
+                }
+                let endLink = enablePermSetSummary ? psetOrGroupId + "/summary" : "page?address=%2F" + psetOrGroupId;
+                rec.link = "/lightning/setup/" + type + "/" + endLink;
+              } else if (rec.attributes.type === "Network"){
+                rec.link = "/sfsites/picasso/core/config/commeditor.jsp?servlet/networks/switch?networkId=" + rec.Id;
+                rec.label = rec.Name;
+                let url = rec.UrlPathPrefix ? " • /" + rec.UrlPathPrefix : "";
+                rec.name = rec.Id + url;
+                rec.detail = rec.attributes.type + " (" + rec.Status + ") • Builder";
+              } else if (rec.attributes.type === "ApexClass"){
+                rec.link = "/lightning/setup/ApexClasses/page?address=%2F" + rec.Id;
+                rec.label = rec.Name;
+                rec.name = (rec.NamespacePrefix ? rec.NamespacePrefix + "__" : "") + rec.Name;
+                rec.detail = rec.attributes.type + " • " + rec.ApiVersion + ".0" + " • " + rec.LengthWithoutComments + " chars";
               }
-              let endLink = enablePermSetSummary ? psetOrGroupId + "/summary" : "page?address=%2F" + psetOrGroupId;
-              rec.link = "/lightning/setup/" + type + "/" + endLink;
-            } else if (rec.attributes.type === "Network"){
-              rec.link = "/sfsites/picasso/core/config/commeditor.jsp?servlet/networks/switch?networkId=" + rec.Id;
-              rec.label = rec.Name;
-              let url = rec.UrlPathPrefix ? " • /" + rec.UrlPathPrefix : "";
-              rec.name = rec.Id + url;
-              rec.detail = rec.attributes.type + " (" + rec.Status + ") • Builder";
-            } else if (rec.attributes.type === "ApexClass"){
-              rec.link = "/lightning/setup/ApexClasses/page?address=%2F" + rec.Id;
-              rec.label = rec.Name;
-              rec.name = (rec.NamespacePrefix ? rec.NamespacePrefix + "__" : "") + rec.Name;
-              rec.detail = rec.attributes.type + " • " + rec.ApiVersion + ".0" + " • " + rec.LengthWithoutComments + " chars";
-            }
-            result.push(rec);
+              result.push(rec);
+            });
           });
-        });
+        }
       }
       //if no result found, add the globzl search link
       result.length > 0 ? result : result.push({link: "/one/one.app#" + this.getEncodedGlobalSearch(shortcutSearch), label: '"' + shortcutSearch + '"', detail: "No results found", name: "Use Global Search"});
